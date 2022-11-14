@@ -26,6 +26,7 @@ func Default(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome To AnimeTracker :)")
 }
 
+// get list of anime
 func GetAnime(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	opt := options.Find()
@@ -93,6 +94,41 @@ func GetAnime(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(result) 
 }
 
+// search anime based on title
 func SearchAnime(w http.ResponseWriter, r *http.Request) {
-	// search anime based on title
+	query := r.URL.Query()
+	title, present := query["title"]
+
+	if !present {
+		w.WriteHeader(400)
+		fmt.Fprintf(w,"Error: Bad Request")
+		return
+	}
+
+	filter := bson.M {
+		"title": bson.M {
+			"$regex": title[0],
+			"$options": "i",
+		},
+	}
+
+	cursor, err := collection.Find(context.TODO(),filter)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// This error means your query did not match any documents.
+			w.WriteHeader(404)
+			fmt.Fprintf(w,"no documents found")
+			return
+		}
+		panic(err)
+	}
+
+	var result []models.Anime
+	if err = cursor.All(context.Background(), &result); err != nil {
+  		log.Fatal(err)
+	}
+
+	// return json object through HTTP response
+	json.NewEncoder(w).Encode(result) 
 }

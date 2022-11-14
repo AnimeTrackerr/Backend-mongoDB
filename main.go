@@ -19,6 +19,7 @@ func routes(collection *mongo.Collection) {
 
 	http.HandleFunc("/", handlers.Default)
 	http.HandleFunc("/getanime", handlers.GetAnime)
+	http.HandleFunc("/searchanime",handlers.SearchAnime)
 	http.ListenAndServe(os.Getenv("PORT"),nil)
 }
 
