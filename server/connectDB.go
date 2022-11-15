@@ -23,10 +23,6 @@ func ConnectDB(URI string) utils.ClientInfo {
 
 	var err1 error = client.Connect(ctx)
 	var err2 error = client.Ping(ctx, readpref.Primary())
-	
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	if err1 != nil{
 		log.Fatal(err1)
