@@ -28,6 +28,11 @@ func Default(w http.ResponseWriter, r *http.Request) {
 
 // get list of anime
 func GetAnime(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.WriteHeader(405)
+		fmt.Fprintf(w,"405 - %s Method not allowed",r.Method)
+		return
+	}
 	query := r.URL.Query()
 	opt := options.Find()
     limit, present := query["limit"]
@@ -96,6 +101,12 @@ func GetAnime(w http.ResponseWriter, r *http.Request) {
 
 // search anime based on title
 func SearchAnime(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.WriteHeader(405)
+		fmt.Fprintf(w,"405 - %s Method not allowed",r.Method)
+		return
+	}
+	
 	query := r.URL.Query()
 	title, present := query["title"]
 
@@ -128,7 +139,7 @@ func SearchAnime(w http.ResponseWriter, r *http.Request) {
 	if err = cursor.All(context.Background(), &result); err != nil {
   		log.Fatal(err)
 	}
-
+ 
 	// return json object through HTTP response
 	json.NewEncoder(w).Encode(result) 
 }
