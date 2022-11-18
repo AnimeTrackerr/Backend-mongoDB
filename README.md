@@ -2,7 +2,7 @@
 
 1. Install Golang and Python
 
-   Download and install Golang from the official website (https://go.dev/doc/install)
+   Download and install Golang from the official website (https://go.dev/doc/install) </br>
    Download and install Python from the official website (https://www.python.org/downloads)
 
 2. Setup Env Variables
