@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/AnimeTrackerr/backend/models"
+	"github.com/AnimeTrackerr/backend/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -33,27 +34,14 @@ func GetAnime(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w,"405 - %s Method not allowed",r.Method)
 		return
 	}
+
 	query := r.URL.Query()
 	opt := options.Find()
-    limit, present := query["limit"]
-	
-	// check if query params "limit" is empty
-    if !present || len(limit) == 0 {
-        w.WriteHeader(400)
-		fmt.Fprintf(w,"Error: Bad Request")
-		return
-    }
-
-	lmt, _ := strconv.ParseInt(limit[0],10,64)
-
-	// check if empty documents are being accessed
-	if lmt <= 0 {
-		w.WriteHeader(400)
-		fmt.Fprintf(w,"Error: Bad Request")
-		return
-	}
 
 	offset, present := query["offset"]
+	var p1_offset int64 = 0
+	var p2_limit int64 = 0
+	p3_sortOps := bson.D{}
 
 	if present {
 		oset, _ := strconv.ParseInt(offset[0],10,64)
@@ -73,12 +61,70 @@ func GetAnime(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		opt.SetSkip(oset)
+		p1_offset = oset
+	}
+
+    limit, present := query["limit"]
+	
+	// check if query params "limit" is empty
+    if !present || len(limit) == 0 {
+        w.WriteHeader(400)
+		fmt.Fprintf(w,"Error: Bad Request")
+		return
+    }
+
+	lmt, _ := strconv.ParseInt(limit[0],10,64)
+
+	// check if empty documents are being accessed
+	if lmt <= 0 {
+		w.WriteHeader(400)
+		fmt.Fprintf(w,"Error: Bad Request")
+		return
 	}
 	
-	opt.SetLimit(lmt)
+	p2_limit = lmt
 
-	cursor, err := collection.Find(context.TODO(),bson.M{},opt)
+	err := utils.AddFilters(query, opt)
+
+	if err != nil {
+		w.WriteHeader(400)
+		fmt.Fprintf(w,"Error: Bad Request")
+		return
+	}
+
+	filters, present := query["filters"]
+
+	if present {
+		filter_list, err := utils.CheckFilter(filters[0])
+		
+		if err != nil {
+			w.WriteHeader(400)
+			fmt.Fprintf(w,"Error: Bad Request")
+			return
+		}
+
+
+		for _, filter := range filter_list {
+			p3_sortOps = append(p3_sortOps, bson.E{Key: filter , Value: 1})
+		}
+
+		opt.SetSort(p3_sortOps)
+	}
+
+	
+	// pipeline stages
+	pipeline := bson.A {
+		bson.D{{Key: "$skip", Value: p1_offset}},
+		bson.D{{Key: "$limit", Value: p2_limit}},
+	}
+
+	if len(p3_sortOps)!=0 {
+		pipeline = append(pipeline,bson.D{{Key: "$sort", Value: p3_sortOps}} ) 
+	}
+
+
+	// aggregate
+	cursor, err := collection.Aggregate(context.TODO(),pipeline)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -91,7 +137,7 @@ func GetAnime(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var result []models.Anime
-	if err = cursor.All(context.Background(), &result); err != nil {
+	if err = cursor.All(context.TODO(), &result); err != nil {
   		log.Fatal(err)
 	}
 
